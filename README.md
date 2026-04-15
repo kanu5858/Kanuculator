@@ -36,9 +36,7 @@ Kanuculator is a sleek, modern, and professional calculator application built wi
 
 ## 📸 Screenshots
 
-| Standard Mode | Scientific Panel |
-| :---: | :---: |
-| ![Standard](https://via.placeholder.com/200x400?text=Standard+UI) | ![Scientific](https://via.placeholder.com/200x400?text=Scientific+UI) |
+![App Screenshot](app/src/main/res/images/Screenshot.png)
 
 ## 📝 License
 
