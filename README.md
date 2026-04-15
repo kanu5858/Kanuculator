@@ -25,7 +25,7 @@ Kanuculator is a sleek, modern, and professional calculator application built wi
 
 1.  **Clone the repository**:
     ```bash
-    git clone https://github.com/yourusername/Kanuculator.git
+    git clone https://github.com/kanu5858/Kanuculator.git
     ```
 2.  **Open in Android Studio**:
     Open the project using Android Studio.
