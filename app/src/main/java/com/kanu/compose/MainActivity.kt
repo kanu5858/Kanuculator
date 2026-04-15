@@ -7,7 +7,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +35,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kanu.compose.ui.theme.ComposeTheme
+import net.objecthunter.exp4j.ExpressionBuilder
+import java.text.DecimalFormat
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -116,18 +117,39 @@ fun Calculator(modifier: Modifier = Modifier) {
                     expression = ""
                 }
                 "⌫" -> {
-                    displayText = if (displayText.length > 1) {
-                        displayText.dropLast(1)
-                    } else {
-                        "0"
+                    if (displayText != "0") {
+                        displayText = if (displayText.length > 1) {
+                            displayText.dropLast(1)
+                        } else {
+                            "0"
+                        }
                     }
                 }
                 "=" -> {
-                    // Logic for calculation will be added here
-                    expression = "$displayText ="
+                    try {
+                        val fullExpression = if (expression.isNotEmpty() && !expression.last().isDigit() && expression.last() != '.') {
+                             if (displayText == "0") expression.dropLast(1).trim() else expression + displayText
+                        } else {
+                            displayText
+                        }
+                        
+                        val result = ExpressionBuilder(fullExpression.replace("×", "*").replace("÷", "/"))
+                            .build()
+                            .evaluate()
+                        
+                        expression = "$fullExpression ="
+                        displayText = formatResult(result)
+                    } catch (e: Exception) {
+                        displayText = "Error"
+                    }
                 }
                 "+", "-", "*", "/", "%" -> {
-                    expression = "$displayText $label"
+                    val op = when(label) {
+                        "*" -> "×"
+                        "/" -> "÷"
+                        else -> label
+                    }
+                    expression = "$displayText $op"
                     displayText = "0"
                 }
                 else -> {
@@ -180,6 +202,14 @@ fun Calculator(modifier: Modifier = Modifier) {
     }
 }
 
+private fun formatResult(result: Double): String {
+    return if (result == result.toLong().toDouble()) {
+        result.toLong().toString()
+    } else {
+        DecimalFormat("#.#######").format(result)
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun CalculatorPreview() {
@@ -187,4 +217,3 @@ fun CalculatorPreview() {
         Calculator()
     }
 }
-
