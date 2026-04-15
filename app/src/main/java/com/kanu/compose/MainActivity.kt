@@ -4,18 +4,22 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -58,14 +62,15 @@ class MainActivity : ComponentActivity() {
 fun Calculator(modifier: Modifier = Modifier) {
     var displayText by remember { mutableStateOf("0") }
     var expression by remember { mutableStateOf("") }
+    var isScientificMode by remember { mutableStateOf(false) }
 
-    // Colors based on the black calculator image
     val backgroundColor = Color(0xFF000000)
     val displayTextColor = Color.White
     val secondaryTextColor = Color(0xFF7C7C7C)
     val numberButtonColor = Color(0xFF17171C)
     val operatorButtonColor = Color(0xFF005DB2)
     val specialButtonColor = Color(0xFF2D2D2D)
+    val scientificButtonColor = Color(0xFF212121)
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -82,13 +87,23 @@ fun Calculator(modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
-                    .padding(vertical = 24.dp),
-                contentAlignment = Alignment.BottomEnd
+                    .padding(vertical = 24.dp)
             ) {
+                // Radical/Scientific Toggle Button
+                IconButton(
+                    onClick = { isScientificMode = !isScientificMode },
+                    modifier = Modifier.align(Alignment.TopEnd),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        contentColor = if (isScientificMode) operatorButtonColor else Color.White
+                    )
+                ) {
+                    Text(text = "√", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                }
+
                 Column(
+                    modifier = Modifier.align(Alignment.BottomEnd),
                     horizontalAlignment = Alignment.End
                 ) {
-                    // Secondary display for expression history
                     Text(
                         text = expression,
                         style = MaterialTheme.typography.headlineSmall,
@@ -98,7 +113,6 @@ fun Calculator(modifier: Modifier = Modifier) {
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
 
-                    // Main display
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (expression.endsWith("=")) {
                             Text(
@@ -142,26 +156,48 @@ fun Calculator(modifier: Modifier = Modifier) {
                     }
                     "=" -> {
                         try {
-                            val fullExpression = if (expression.isNotEmpty() && !expression.last().isDigit() && expression.last() != '.') {
-                                if (displayText == "0") expression.dropLast(1).trim() else expression + displayText
-                            } else {
-                                displayText
-                            }
-                            val result = ExpressionBuilder(fullExpression.replace("×", "*").replace("÷", "/")).build().evaluate()
-                            expression = "$fullExpression ="
+                            val cleanExpr = (if (expression.endsWith("=")) "" else expression + (if (displayText == "0") "" else displayText))
+                                .replace("×", "*")
+                                .replace("÷", "/")
+                                .replace("√", "sqrt")
+                                .replace("π", "pi")
+                                .replace("log", "log10")
+                                .replace("ln", "log")
+
+                            val result = ExpressionBuilder(cleanExpr).build().evaluate()
+                            expression = "$cleanExpr ="
                             displayText = formatResult(result)
                         } catch (e: Exception) {
                             displayText = "Error"
                         }
                     }
-                    "+", "-", "*", "/", "%" -> {
+                    "+", "-", "*", "/", "%", "^" -> {
                         val op = when(label) {
                             "*" -> "×"
                             "/" -> "÷"
                             else -> label
                         }
-                        expression = "$displayText $op"
+                        expression = if (expression.endsWith("=")) {
+                            displayText + " " + op + " "
+                        } else {
+                            expression + displayText + " " + op + " "
+                        }
                         displayText = "0"
+                    }
+                    "sin", "cos", "tan", "log", "ln", "√" -> {
+                        val func = when(label) {
+                            "√" -> "√("
+                            else -> "$label("
+                        }
+                        expression += func
+                        displayText = "0"
+                    }
+                    "(", ")" -> {
+                        expression += label
+                        displayText = "0"
+                    }
+                    "π", "e" -> {
+                        displayText = label
                     }
                     else -> {
                         if (expression.endsWith("=")) {
@@ -174,7 +210,33 @@ fun Calculator(modifier: Modifier = Modifier) {
                 }
             }
 
-            // Keypad Grid (Keeping your button order)
+            // Scientific Panel (Horizontal Scroll)
+            if (isScientificMode) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val sciButtons = listOf("sin", "cos", "tan", "log", "ln", "(", ")", "√", "^", "π", "e")
+                    sciButtons.forEach { label ->
+                        Button(
+                            onClick = { onButtonClick(label) },
+                            modifier = Modifier.height(48.dp),
+                            shape = MaterialTheme.shapes.medium,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = scientificButtonColor,
+                                contentColor = Color.LightGray
+                            )
+                        ) {
+                            Text(text = label, fontSize = 16.sp)
+                        }
+                    }
+                }
+            }
+
+            // Keypad Grid
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
