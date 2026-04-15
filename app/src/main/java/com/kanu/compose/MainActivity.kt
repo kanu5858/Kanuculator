@@ -7,27 +7,31 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,6 +56,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun Calculator(modifier: Modifier = Modifier) {
     var displayText by remember { mutableStateOf("0") }
+    var expression by remember { mutableStateOf("") }
 
     Column(
         modifier = modifier
@@ -59,22 +64,57 @@ fun Calculator(modifier: Modifier = Modifier) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // Calculator Display
-        Text(
-            text = displayText,
+        // Professional Calculator Display
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(bottom = 32.dp),
-            textAlign = TextAlign.End,
-            style = MaterialTheme.typography.displayLarge,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2
-        )
+                .padding(vertical = 24.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.Bottom,
+                horizontalAlignment = Alignment.End
+            ) {
+                // Secondary display for expression history
+                Text(
+                    text = expression,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Main display for current value
+                Text(
+                    text = displayText,
+                    textAlign = TextAlign.End,
+                    style = MaterialTheme.typography.displayLarge.copy(
+                        fontSize = when {
+                            displayText.length > 10 -> 40.sp
+                            displayText.length > 7 -> 54.sp
+                            else -> 72.sp
+                        },
+                        fontWeight = FontWeight.Medium
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip
+                )
+            }
+        }
 
         val onButtonClick: (String) -> Unit = { label ->
             when (label) {
-                "C" -> displayText = "0"
+                "C" -> {
+                    displayText = "0"
+                    expression = ""
+                }
                 "⌫" -> {
                     displayText = if (displayText.length > 1) {
                         displayText.dropLast(1)
@@ -83,7 +123,12 @@ fun Calculator(modifier: Modifier = Modifier) {
                     }
                 }
                 "=" -> {
-                    // Calculation logic will go here
+                    // Logic for calculation will be added here
+                    expression = "$displayText ="
+                }
+                "+", "-", "*", "/", "%" -> {
+                    expression = "$displayText $label"
+                    displayText = "0"
                 }
                 else -> {
                     displayText = if (displayText == "0") label else displayText + label
