@@ -104,6 +104,7 @@ fun Calculator(modifier: Modifier = Modifier) {
                     modifier = Modifier.align(Alignment.BottomEnd),
                     horizontalAlignment = Alignment.End
                 ) {
+                    // Top row: History / Last calculation
                     Text(
                         text = expression,
                         style = MaterialTheme.typography.headlineSmall,
@@ -113,6 +114,7 @@ fun Calculator(modifier: Modifier = Modifier) {
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
 
+                    // Bottom row: Active Input
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (expression.endsWith("=")) {
                             Text(
@@ -129,7 +131,8 @@ fun Calculator(modifier: Modifier = Modifier) {
                             textAlign = TextAlign.End,
                             style = MaterialTheme.typography.displayLarge.copy(
                                 fontSize = when {
-                                    displayText.length > 10 -> 40.sp
+                                    displayText.length > 15 -> 32.sp
+                                    displayText.length > 10 -> 42.sp
                                     displayText.length > 7 -> 54.sp
                                     else -> 72.sp
                                 },
@@ -151,21 +154,31 @@ fun Calculator(modifier: Modifier = Modifier) {
                     }
                     "⌫" -> {
                         if (displayText != "0") {
-                            displayText = if (displayText.length > 1) displayText.dropLast(1) else "0"
+                            displayText = if (displayText.length > 1) {
+                                if (displayText.endsWith(" ")) displayText.dropLast(3) else displayText.dropLast(1)
+                            } else "0"
+                            if (displayText.isEmpty()) displayText = "0"
                         }
                     }
                     "=" -> {
                         try {
-                            val cleanExpr = (if (expression.endsWith("=")) "" else expression + (if (displayText == "0") "" else displayText))
+                            var cleanExpr = displayText
                                 .replace("×", "*")
                                 .replace("÷", "/")
                                 .replace("√", "sqrt")
                                 .replace("π", "pi")
                                 .replace("log", "log10")
                                 .replace("ln", "log")
+                            
+                            // Auto-close brackets for safety
+                            val openCount = cleanExpr.count { it == '(' }
+                            val closeCount = cleanExpr.count { it == ')' }
+                            if (openCount > closeCount) {
+                                cleanExpr += ")".repeat(openCount - closeCount)
+                            }
 
                             val result = ExpressionBuilder(cleanExpr).build().evaluate()
-                            expression = "$cleanExpr ="
+                            expression = "$displayText ="
                             displayText = formatResult(result)
                         } catch (e: Exception) {
                             displayText = "Error"
@@ -177,29 +190,32 @@ fun Calculator(modifier: Modifier = Modifier) {
                             "/" -> "÷"
                             else -> label
                         }
-                        expression = if (expression.endsWith("=")) {
-                            displayText + " " + op + " "
-                        } else {
-                            expression + displayText + " " + op + " "
-                        }
-                        displayText = "0"
+                        if (expression.endsWith("=")) expression = ""
+                        if (displayText == "0") displayText = "0 $op " else displayText += " $op "
                     }
                     "sin", "cos", "tan", "log", "ln", "√" -> {
                         val func = when(label) {
                             "√" -> "√("
                             else -> "$label("
                         }
-                        expression += func
-                        displayText = "0"
+                        if (expression.endsWith("=")) {
+                            expression = ""
+                            displayText = func
+                        } else {
+                            if (displayText == "0") displayText = func else displayText += func
+                        }
                     }
                     "(", ")" -> {
-                        expression += label
-                        displayText = "0"
+                        if (expression.endsWith("=")) { expression = ""; displayText = label }
+                        else if (displayText == "0") displayText = label
+                        else displayText += label
                     }
                     "π", "e" -> {
-                        displayText = label
+                        if (expression.endsWith("=")) { expression = ""; displayText = label }
+                        else if (displayText == "0") displayText = label
+                        else displayText += label
                     }
-                    else -> {
+                    else -> { // Numbers and dot
                         if (expression.endsWith("=")) {
                             expression = ""
                             displayText = label
@@ -210,7 +226,7 @@ fun Calculator(modifier: Modifier = Modifier) {
                 }
             }
 
-            // Scientific Panel (Horizontal Scroll)
+            // Scientific Panel
             if (isScientificMode) {
                 Row(
                     modifier = Modifier
@@ -258,12 +274,15 @@ fun Calculator(modifier: Modifier = Modifier) {
                         column.forEach { label ->
                             val isOperator = label in listOf("/", "*", "-", "+", "=")
                             val isSpecial = label in listOf("C", "⌫", "%")
+                            val isClear = label == "C"
                             
                             val containerColor = when {
                                 isOperator -> operatorButtonColor
                                 isSpecial -> specialButtonColor
                                 else -> numberButtonColor
                             }
+
+                            val contentColor = if (isClear) Color.Red else Color.White
 
                             Button(
                                 onClick = { onButtonClick(label) },
@@ -272,7 +291,7 @@ fun Calculator(modifier: Modifier = Modifier) {
                                 shape = MaterialTheme.shapes.large,
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = containerColor,
-                                    contentColor = Color.White
+                                    contentColor = contentColor
                                 ),
                                 contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                             ) {
@@ -283,7 +302,7 @@ fun Calculator(modifier: Modifier = Modifier) {
                                         else -> label
                                     },
                                     fontSize = 24.sp,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = if (isClear) FontWeight.Bold else FontWeight.Medium
                                 )
                             }
                         }
